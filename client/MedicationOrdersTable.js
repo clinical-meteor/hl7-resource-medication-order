@@ -4,6 +4,43 @@ import React from 'react';
 import { ReactMeteorData } from 'meteor/react-meteor-data';
 import ReactMixin from 'react-mixin';
 import { Table } from 'react-bootstrap';
+import { get } from 'lodash';
+import { moment } from 'meteor/momentjs:moment';
+
+flattenMedicationOrder = function(medicationOrder){
+  console.log('flattenMedicationOrder', medicationOrder)
+
+  let newRow = {
+    _id: medicationOrder._id,
+    status: '',
+    identifier: '',
+    patientDisplay: '',
+    prescriberDisplay: '',
+    asserterDisplay: '',
+    clinicalStatus: '',
+    snomedCode: '',
+    snomedDisplay: '',
+    evidenceDisplay: '',
+    barcode: '',
+    dateWritten: '',
+    dosageInstructionText: ''
+  };
+
+  newRow.status = get(medicationOrder, 'status');
+  newRow.identifier = get(medicationOrder, 'identifier[0].value');
+  newRow.patientDisplay = get(medicationOrder, 'patient.display');
+  newRow.prescriberDisplay = get(medicationOrder, 'prescriber.display');
+  newRow.dateWritten = moment(get(medicationOrder, 'dateWritten')).format("YYYY-MM-DD");
+  newRow.dosageInstructionText = get(medicationOrder, 'dosageInstruction[0].text');
+  // newRow.asserterDisplay = get(medicationOrder, 'asserter.display');
+  // newRow.clinicalStatus = get(medicationOrder, 'clinicalStatus');
+  // newRow.snomedCode = get(medicationOrder, 'code.coding[0].code');
+  // newRow.snomedDisplay = get(medicationOrder, 'code.coding[0].display');
+  // newRow.evidenceDisplay = get(medicationOrder, 'evidence[0].detail[0].display');
+  newRow.barcode = get(medicationOrder, '_id');
+
+  return newRow;
+}
 
 export default class MedicationOrdersTable extends React.Component {
 
@@ -19,12 +56,17 @@ export default class MedicationOrdersTable extends React.Component {
       medicationOrders: []
     }
     
-    if(MedicationOrders.find().count() > 0){
-      data.medicationOrders = MedicationOrders.find().fetch();
+    if(this.props.data){
+      console.log('this.props.data', this.props.data)
+      this.props.data.forEach(function(order){
+        console.log('order', order)
+        data.medicationOrders.push(flattenMedicationOrder(order));
+      })
+    } else {
+      data.medicationOrders = MedicationOrders.find().map(flattenMedicationOrder);
     }
 
-
-    if(process.env.NODE_ENV === "test") console.log("data", data);
+    if(process.env.NODE_ENV === "test") console.log("MedicationOrdersTable.data", data);
     return data;
   };
 
@@ -37,66 +79,33 @@ export default class MedicationOrdersTable extends React.Component {
   render () {
     let tableRows = [];
     for (var i = 0; i < this.data.medicationOrders.length; i++) {
-      var newRow = {
-        patientDisplay: '',
-        asserterDisplay: '',
-        clinicalStatus: '',
-        snomedCode: '',
-        snomedDisplay: '',
-        evidenceDisplay: '',
-        barcode: ''
-      };
-      // if (this.data.medicationOrders[i]){
-      //   if(this.data.medicationOrders[i].patient){
-      //     newRow.patientDisplay = this.data.medicationOrders[i].patient.display;
-      //   }
-      //   if(this.data.medicationOrders[i].asserter){
-      //     newRow.asserterDisplay = this.data.medicationOrders[i].asserter.display;
-      //   }
-      //   if(this.data.medicationOrders[i].clinicalStatus){
-      //     newRow.clinicalStatus = this.data.medicationOrders[i].clinicalStatus;
-      //   }
-      //   if(this.data.medicationOrders[i].code){
-      //     if(this.data.medicationOrders[i].code.coding && this.data.medicationOrders[i].code.coding[0]){            
-      //       newRow.snomedCode = this.data.medicationOrders[i].code.coding[0].code;
-      //       newRow.snomedDisplay = this.data.medicationOrders[i].code.coding[0].display;
-      //     }
-      //   }
-      //   if(this.data.medicationOrders[i].evidence && this.data.medicationOrders[i].evidence[0]){
-      //     if(this.data.medicationOrders[i].evidence[0].detail && this.data.medicationOrders[i].evidence[0].detail[0]){            
-      //       newRow.evidenceDisplay = this.data.medicationOrders[i].evidence[0].detail[0].display;
-      //     }
-      //   }
-      //   if(this.data.medicationOrders[i]._id){
-      //     newRow.barcode = this.data.medicationOrders[i]._id;
-      //   }        
-      // }
+      var newRow = this.data.medicationOrders[i];
 
       tableRows.push(
         <tr key={i} className="medicationOrderRow" style={{cursor: "pointer"}} onClick={ this.rowClick.bind('this', this.data.medicationOrders[i]._id)} >
 
-          <td className='patientDisplay'>{ newRow.patientDisplay }</td>
-          <td className='asserterDisplay'>{ newRow.asserterDisplay }</td>
-          <td className='clinicalStatus'>{ newRow.clinicalStatus }</td>
-          <td className='snomedCode'>{ newRow.snomedCode }</td>
-          <td className='snomedDisplay'>{ newRow.snomedDisplay }</td>
-          <td className='evidenceDisplay'>{ newRow.evidenceDisplay }</td>
-          <td><span className="barcode">{ newRow.barcode }</span></td>
+          <td className='identifier'>{ newRow.identifier }</td>
+          <td className='status'>{ newRow.status }</td>
+          <td className='patientDisplay'style={{minWidth: '140px'}}>{ newRow.patientDisplay }</td>
+          <td className='prescriberDisplay' style={{minWidth: '200px'}}>{ newRow.prescriberDisplay }</td>
+          <td className='dateWritten'>{ newRow.dateWritten }</td>
+          <td className='dosageInstructionText'>{ newRow.dosageInstructionText }</td>
+          {/* <td><span className="barcode">{ newRow.barcode }</span></td> */}
         </tr>
       )
     }
 
     return(
-      <Table id='medicationOrdersTable' responses hover >
+      <Table id='medicationOrdersTable' hover >
         <thead>
           <tr>
-            <th className='patientDisplay'>patient</th>
-            <th className='asserterDisplay'>asserter</th>
-            <th className='clinicalStatus'>status</th>
-            <th className='snomedCode'>code</th>
-            <th className='snomedDisplay'>medicationOrder</th>
-            <th className='evidenceDisplay'>evidence</th>
-            <th>_id</th>
+            <th className='identifier'>identifier</th>
+            <th className='status'>status</th>
+            <th className='patientDisplay'style={{minWidth: '140px'}}>patient</th>
+            <th className='prescriberDisplay' style={{minWidth: '200px'}}>prescriber</th>
+            <th className='dateWritten'>date written</th>
+            <th className='dosageInstructionText'>dosage</th>
+            {/* <th>_id</th> */}
           </tr>
         </thead>
         <tbody>
