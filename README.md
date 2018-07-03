@@ -10,7 +10,7 @@
 
 
 #### API Reference  
-The resource in this package implements Medication Order resource schema, specified at [https://www.hl7.org/fhir/medicationorder.html](https://www.hl7.org/fhir/medicationorder.html). 
+The resource in this package implements Medication Order resource schema, specified at [https://www.hl7.org/fhir/DSTU2/medicationorder.html](https://www.hl7.org/fhir/DSTU2/medicationorder.html). 
 
 
 
