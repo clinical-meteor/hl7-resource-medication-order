@@ -1,6 +1,6 @@
 Package.describe({
   name: 'clinical:hl7-resource-medication-order',
-  version: '1.6.2',
+  version: '1.6.4',
   summary: 'HL7 FHIR Resource - MedicationOrder',
   git: 'https://github.com/clinical-meteor/hl7-resource-medication-order',
   documentation: 'README.md'

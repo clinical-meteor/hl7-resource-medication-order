@@ -69,7 +69,16 @@ export default class MedicationOrdersTable extends React.Component {
     if(process.env.NODE_ENV === "test") console.log("MedicationOrdersTable.data", data);
     return data;
   };
-
+  displayOnMobile(width){
+    let style = {};
+    if(['iPhone'].includes(window.navigator.platform)){
+      style.display = "none";
+    }
+    if(width){
+      style.width = width;
+    }
+    return style;
+  }
 
   rowClick(id){
     Session.set('medicationOrdersUpsert', false);
@@ -84,9 +93,9 @@ export default class MedicationOrdersTable extends React.Component {
       tableRows.push(
         <tr key={i} className="medicationOrderRow" style={{cursor: "pointer"}} onClick={ this.rowClick.bind('this', this.data.medicationOrders[i]._id)} >
 
-          <td className='identifier'>{ newRow.identifier }</td>
-          <td className='status'>{ newRow.status }</td>
-          <td className='patientDisplay'style={{minWidth: '140px'}}>{ newRow.patientDisplay }</td>
+          <td className='identifier' style={ this.displayOnMobile()} >{ newRow.identifier }</td>
+          <td className='status' style={ this.displayOnMobile()}>{ newRow.status }</td>
+          <td className='patientDisplay' style={ this.displayOnMobile('140px')} >{ newRow.patientDisplay }</td>
           <td className='prescriberDisplay' style={{minWidth: '200px'}}>{ newRow.prescriberDisplay }</td>
           <td className='dateWritten'>{ newRow.dateWritten }</td>
           <td className='dosageInstructionText'>{ newRow.dosageInstructionText }</td>
@@ -99,9 +108,9 @@ export default class MedicationOrdersTable extends React.Component {
       <Table id='medicationOrdersTable' hover >
         <thead>
           <tr>
-            <th className='identifier'>identifier</th>
-            <th className='status'>status</th>
-            <th className='patientDisplay'style={{minWidth: '140px'}}>patient</th>
+            <th className='identifier' style={ this.displayOnMobile()} >identifier</th>
+            <th className='status' style={ this.displayOnMobile()} >status</th>
+            <th className='patientDisplay' style={ this.displayOnMobile('140px')} >patient</th>
             <th className='prescriberDisplay' style={{minWidth: '200px'}}>prescriber</th>
             <th className='dateWritten'>date written</th>
             <th className='dosageInstructionText'>dosage</th>
