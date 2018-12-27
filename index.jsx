@@ -2,6 +2,7 @@
 
 import MedicationOrdersPage from './client/MedicationOrdersPage';
 import MedicationOrdersTable from './client/MedicationOrdersTable';
+import MedicationOrderDetail from './client/MedicationOrderDetail';
 import { MedicationOrder, MedicationOrders, MedicationOrderSchema } from './lib/MedicationOrders';
 
 var DynamicRoutes = [{
@@ -22,7 +23,8 @@ export {
   DynamicRoutes, 
 
   MedicationOrdersPage,
-  MedicationOrdersTable
+  MedicationOrdersTable,
+  MedicationOrderDetail
 };
 
 

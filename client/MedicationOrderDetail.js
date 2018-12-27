@@ -7,6 +7,7 @@ import { ReactMeteorData } from 'meteor/react-meteor-data';
 import ReactMixin from 'react-mixin';
 import TextField from 'material-ui/TextField';
 import PropTypes from 'prop-types';
+import { get, set } from 'lodash';
 
 let defaultMedicationOrder = {
   "resourceType": "MedicationOrder",
@@ -58,35 +59,149 @@ Session.setDefault('medicationOrderUpsert', false);
 Session.setDefault('selectedMedicationOrder', false);
 
 
-export default class MedicationOrderDetail extends React.Component {
-  getMeteorData() {
-    let data = {
-      medicationOrderId: false,
-      medicationOrder: defaultMedicationOrder
-    };
+export class MedicationOrderDetail extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      observationId: false,
+      observation: {
+        "resourceType": "MedicationOrder",
+        "patient": {
+          "reference": "",
+          "display": ""
+        },
+        "asserter": {
+          "reference": "",
+          "display": ""
+        },
+        "dateRecorded": "",
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "",
+              "display": ""
+            }
+          ]
+        },
+        "clinicalStatus": "",
+        "verificationStatus": "confirmed",
+        "severity": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "",
+              "display": ""
+            }
+          ]
+        },
+        "onsetDateTime": "",
+        "evidence": [
+          {
+            "detail": [
+              {
+                "reference": "",
+                "display": ""
+              }
+            ]
+          }
+        ]
+      },
+      form: {
+        dateWritten: '',
+        disageInstruction: '',
+        medicationCode: '',
+        note: '',
+        patient: '',
+        prescriber: '',
+        status: ''        
+      }
+    }
+  }
+  dehydrateFhirResource(observation) {
+    let formData = Object.assign({}, this.state.form);
 
-    if (Session.get('medicationOrderUpsert')) {
-      data.medicationOrder = Session.get('medicationOrderUpsert');
-    } else {
-      if (Session.get('selectedMedicationOrder')) {
-        data.medicationOrderId = Session.get('selectedMedicationOrder');
-        console.log("selectedMedicationOrder", Session.get('selectedMedicationOrder'));
+    formData.dateWritten = get(observation, 'dateWritten')
+    formData.disageInstruction = get(observation, 'disageInstruction[0].text')
+    formData.medicationCode = get(observation, 'medicationCode.text')
+    formData.note = get(observation, 'note')
+    formData.patient = get(observation, 'patient.display')
+    formData.prescriber = get(observation, 'prescriber.display')
+    formData.status = get(observation, 'status')
 
-        let selectedMedicationOrder = MedicationOrders.findOne({_id: Session.get('selectedMedicationOrder')});
-        console.log("selectedMedicationOrder", selectedMedicationOrder);
+    return formData;
+  }
+  shouldComponentUpdate(nextProps){
+    process.env.NODE_ENV === "test" && console.log('MedicationOrderDetail.shouldComponentUpdate()', nextProps, this.state)
+    let shouldUpdate = true;
 
-        if (selectedMedicationOrder) {
-          data.medicationOrder = selectedMedicationOrder;
-        }
-      } else {
-        data.medicationOrder = defaultMedicationOrder;
+    // received an observation from the table; okay lets update again
+    if(nextProps.medicationOrderId !== this.state.medicationOrderId){
+
+      if(nextProps.medicationOrder){
+        this.setState({medicationOrder: nextProps.medicationOrder})     
+        this.setState({form: this.dehydrateFhirResource(nextProps.medicationOrder)})       
       }
 
+      this.setState({medicationOrderId: nextProps.medicationOrderId})      
+      shouldUpdate = true;
     }
 
-    return data;
+    // both false; don't take any more updates
+    if(nextProps.medicationOrder === this.state.medicationOrder){
+      shouldUpdate = false;
+    }
+    
+    return shouldUpdate;
   }
 
+
+  getMeteorData() {
+    let data = {
+      medicationOrderId:  this.props.medicationOrderId,
+      medicationOrder: false,
+      form: this.state.form,
+      displayDatePicker: false
+    };
+
+    if(this.props.displayDatePicker){
+      data.displayDatePicker = this.props.displayDatePicker
+    }
+    
+    if(this.props.medicationOrder){
+      data.medicationOrder = this.props.medicationOrder;
+      data.form = this.dehydrateFhirResource(this.props.medicationOrder);
+    }
+
+    // if (Session.get('medicationOrderUpsert')) {
+    //   data.medicationOrder = Session.get('medicationOrderUpsert');
+    // } else {
+    //   if (Session.get('selectedMedicationOrder')) {
+    //     data.medicationOrderId = Session.get('selectedMedicationOrder');
+    //     console.log("selectedMedicationOrder", Session.get('selectedMedicationOrder'));
+
+    //     let selectedMedicationOrder = MedicationOrders.findOne({_id: Session.get('selectedMedicationOrder')});
+    //     console.log("selectedMedicationOrder", selectedMedicationOrder);
+
+    //     if (selectedMedicationOrder) {
+    //       data.medicationOrder = selectedMedicationOrder;
+    //     }
+    //   } else {
+    //     data.medicationOrder = defaultMedicationOrder;
+    //   }
+
+    // }
+
+    console.log('MedicationOrderDetail[data]', data);
+    return data;
+  }
+  setHint(text){
+    if(this.props.showHints !== false){
+      return text;
+    } else {
+      return '';
+    }
+  }
   render() {
     return (
       <div id={this.props.id} className="medicationOrderDetail">
@@ -292,6 +407,17 @@ export default class MedicationOrderDetail extends React.Component {
 
 
 MedicationOrderDetail.propTypes = {
-  hasUser: PropTypes.object
+  id: PropTypes.string,
+  fhirVersion: PropTypes.string,
+  medicationOrderId: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
+  medicationOrder: PropTypes.oneOfType([PropTypes.object, PropTypes.bool]),
+  showPatientInputs: PropTypes.bool,
+  showHints: PropTypes.bool,
+  onInsert: PropTypes.func,
+  onUpdate: PropTypes.func,
+  onRemove: PropTypes.func,
+  onCancel: PropTypes.func
 };
+
 ReactMixin(MedicationOrderDetail.prototype, ReactMeteorData);
+export default MedicationOrderDetail;
