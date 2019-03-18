@@ -9,7 +9,7 @@ import { Card, CardActions, CardMedia, CardText, CardTitle, Toggle } from 'mater
 import { FaTags, FaCode, FaPuzzlePiece, FaLock  } from 'react-icons/fa';
 
 flattenMedicationOrder = function(medicationOrder){
-  console.log('flattenMedicationOrder', medicationOrder)
+  // console.log('flattenMedicationOrder', medicationOrder)
 
   let newRow = {
     _id: medicationOrder._id,
@@ -24,7 +24,8 @@ flattenMedicationOrder = function(medicationOrder){
     evidenceDisplay: '',
     barcode: '',
     dateWritten: '',
-    dosageInstructionText: ''
+    dosageInstructionText: '',
+    medicationCodeableConcept: ''
   };
 
   newRow.medication = get(medicationOrder, 'medicationReference.display');
@@ -34,6 +35,7 @@ flattenMedicationOrder = function(medicationOrder){
   newRow.prescriberDisplay = get(medicationOrder, 'prescriber.display');
   newRow.dateWritten = moment(get(medicationOrder, 'dateWritten')).format("YYYY-MM-DD");
   newRow.dosageInstructionText = get(medicationOrder, 'dosageInstruction[0].text');
+  newRow.medicationCodeableConcept = get(medicationOrder, 'medicationCodeableConcept.text');
   // newRow.asserterDisplay = get(medicationOrder, 'asserter.display');
   // newRow.clinicalStatus = get(medicationOrder, 'clinicalStatus');
   // newRow.snomedCode = get(medicationOrder, 'code.coding[0].code');
@@ -45,7 +47,6 @@ flattenMedicationOrder = function(medicationOrder){
 }
 
 export class MedicationOrdersTable extends React.Component {
-
   getMeteorData() {
 
     // this should all be handled by props
@@ -59,9 +60,9 @@ export class MedicationOrdersTable extends React.Component {
     }
     
     if(this.props.data){
-      console.log('this.props.data', this.props.data)
+      // console.log('this.props.data', this.props.data)
       this.props.data.forEach(function(order){
-        console.log('order', order)
+        // console.log('order', order)
         data.medicationOrders.push(flattenMedicationOrder(order));
       })
     } else {
