@@ -1,11 +1,12 @@
-import { Card, CardActions, CardMedia, CardText, CardTitle } from 'material-ui/Card';
-
 import React from 'react';
 import { ReactMeteorData } from 'meteor/react-meteor-data';
 import ReactMixin from 'react-mixin';
 import { Table } from 'react-bootstrap';
 import { get } from 'lodash';
 import { moment } from 'meteor/momentjs:moment';
+import PropTypes from 'prop-types';
+import { Card, CardActions, CardMedia, CardText, CardTitle, Toggle } from 'material-ui';
+import { FaTags, FaCode, FaPuzzlePiece, FaLock  } from 'react-icons/fa';
 
 flattenMedicationOrder = function(medicationOrder){
   console.log('flattenMedicationOrder', medicationOrder)
@@ -26,6 +27,7 @@ flattenMedicationOrder = function(medicationOrder){
     dosageInstructionText: ''
   };
 
+  newRow.medication = get(medicationOrder, 'medicationReference.display');
   newRow.status = get(medicationOrder, 'status');
   newRow.identifier = get(medicationOrder, 'identifier[0].value');
   newRow.patientDisplay = get(medicationOrder, 'patient.display');
@@ -42,7 +44,7 @@ flattenMedicationOrder = function(medicationOrder){
   return newRow;
 }
 
-export default class MedicationOrdersTable extends React.Component {
+export class MedicationOrdersTable extends React.Component {
 
   getMeteorData() {
 
@@ -85,6 +87,72 @@ export default class MedicationOrdersTable extends React.Component {
     Session.set('selectedMedicationOrder', id);
     Session.set('medicationOrderPageTabIndex', 2);
   };
+
+  renderToggleHeader(){
+    if (!this.props.hideToggle) {
+      return (
+        <th className="toggle">Toggle</th>
+      );
+    }
+  }
+  renderToggle(){
+    if (!this.props.hideToggle) {
+      return (
+        <td className="toggle" style={{width: '60px'}}>
+            <Toggle
+              defaultToggled={true}
+            />
+          </td>
+      );
+    }
+  }
+  renderActionIconsHeader(){
+    if (!this.props.hideActionIcons) {
+      return (
+        <th className='actionIcons' style={{minWidth: '120px'}}>Actions</th>
+      );
+    }
+  }
+  renderActionIcons(actionIcons ){
+    if (!this.props.hideActionIcons) {
+      return (
+        <td className='actionIcons' style={{minWidth: '120px'}}>
+          <FaLock style={{marginLeft: '2px', marginRight: '2px'}} />
+          <FaTags style={{marginLeft: '2px', marginRight: '2px'}} />
+          <FaCode style={{marginLeft: '2px', marginRight: '2px'}} />
+          <FaPuzzlePiece style={{marginLeft: '2px', marginRight: '2px'}} />          
+        </td>
+      );
+    }
+  } 
+  renderPatientNameHeader(){
+    if (!this.props.hidePatient) {
+      return (
+        <th className='patientDisplay'>patient</th>
+      );
+    }
+  }
+  renderPatientName(patientDisplay ){
+    if (!this.props.hidePatient) {
+      return (
+        <td className='patientDisplay' style={{minWidth: '140px'}}>{ patientDisplay }</td>
+      );
+    }
+  }
+  renderIdentifierHeader(){
+    if (!this.props.hideIdentifier) {
+      return (
+        <th className='identifier'>Identifier</th>
+      );
+    }
+  }
+  renderIdentifier(identifier ){
+    if (!this.props.hideIdentifier) {
+      return (
+        <td className='identifier'>{ identifier }</td>
+      );
+    }
+  } 
   render () {
     let tableRows = [];
     for (var i = 0; i < this.data.medicationOrders.length; i++) {
@@ -93,9 +161,15 @@ export default class MedicationOrdersTable extends React.Component {
       tableRows.push(
         <tr key={i} className="medicationOrderRow" style={{cursor: "pointer"}} onClick={ this.rowClick.bind('this', this.data.medicationOrders[i]._id)} >
 
-          <td className='identifier' style={ this.displayOnMobile()} >{ newRow.identifier }</td>
+          { this.renderToggle() }
+          { this.renderActionIcons() }
+          { this.renderIdentifier(newRow.identifier) }
+
+          {/* <td className='identifier' style={ this.displayOnMobile()} >{ newRow.identifier }</td> */}
+          <td className='medication' style={ this.displayOnMobile()}>{ newRow.medication }</td>
           <td className='status' style={ this.displayOnMobile()}>{ newRow.status }</td>
-          <td className='patientDisplay' style={ this.displayOnMobile('140px')} >{ newRow.patientDisplay }</td>
+          { this.renderPatientName(newRow.patientDisplay ) } 
+          {/* <td className='patientDisplay' style={ this.displayOnMobile('140px')} >{ newRow.patientDisplay }</td> */}
           <td className='prescriberDisplay' style={{minWidth: '200px'}}>{ newRow.prescriberDisplay }</td>
           <td className='dateWritten'>{ newRow.dateWritten }</td>
           <td className='dosageInstructionText'>{ newRow.dosageInstructionText }</td>
@@ -108,12 +182,18 @@ export default class MedicationOrdersTable extends React.Component {
       <Table id='medicationOrdersTable' hover >
         <thead>
           <tr>
-            <th className='identifier' style={ this.displayOnMobile()} >identifier</th>
-            <th className='status' style={ this.displayOnMobile()} >status</th>
-            <th className='patientDisplay' style={ this.displayOnMobile('140px')} >patient</th>
-            <th className='prescriberDisplay' style={{minWidth: '200px'}}>prescriber</th>
-            <th className='dateWritten'>date written</th>
-            <th className='dosageInstructionText'>dosage</th>
+            { this.renderToggleHeader() }
+            { this.renderActionIconsHeader() }
+            { this.renderIdentifier() }
+
+            {/* <th className='identifier' style={ this.displayOnMobile()} >Identifier</th> */}
+            <th className='medication' style={ this.displayOnMobile()} >Medication</th>
+            <th className='status' style={ this.displayOnMobile()} >Status</th>
+            { this.renderPatientNameHeader() }
+            {/* <th className='patientDisplay' style={ this.displayOnMobile('140px')} >Patient</th> */}
+            <th className='prescriberDisplay' style={{minWidth: '200px'}}>Prescriber</th>
+            <th className='dateWritten' style={{minWidth: '100px'}}>Date Written</th>
+            <th className='dosageInstructionText'>Dosage</th>
             {/* <th>_id</th> */}
           </tr>
         </thead>
@@ -125,5 +205,14 @@ export default class MedicationOrdersTable extends React.Component {
   }
 }
 
-
+MedicationOrdersTable.propTypes = {
+  id: PropTypes.string,
+  fhirVersion: PropTypes.string,
+  showSendButton: PropTypes.bool,
+  hideToggle: PropTypes.bool,
+  hideActionIcons: PropTypes.bool,
+  hidePatient: PropTypes.bool,
+  noDataMessagePadding: PropTypes.number
+};
 ReactMixin(MedicationOrdersTable.prototype, ReactMeteorData);
+export default MedicationOrdersTable;
