@@ -1,22 +1,21 @@
 
 Meteor.methods({
     createMedicationOrder:function(medicationOrderObject){
-    check(medicationOrderObject, Object);
+        check(medicationOrderObject, Object);
 
-    if (process.env.NODE_ENV === 'test') {
-        console.log('Creating MedicationOrder...');
-        MedicationOrders.insert(medicationOrderObject, function(error, result){
-        if (error) {
-            console.log(error);
+        if (process.env.NIGHTWATCH || this.userId) {
+            console.log('Creating MedicationOrder...');
+            MedicationOrders.insert(medicationOrderObject, function(error, result){
+            if (error) {
+                console.log(error);
+            }
+            if (result) {
+                console.log('MedicationOrder created: ' + result);
+            }
+            });
+        } else {
+            console.log('Not authorized.  Try logging in or setting NIGHTWATCH=true')
         }
-        if (result) {
-            console.log('MedicationOrder created: ' + result);
-        }
-        });
-    } else {
-        console.log('This command can only be run in a test environment.');
-        console.log('Try setting NODE_ENV=test');
-    }
     },
     initializeMedicationOrder:function(medicationOrderValue, deviceId){
     check(medicationOrderValue, Number);
@@ -72,25 +71,23 @@ Meteor.methods({
     }
     },
     removeMedicationOrderById: function(medicationOrderId){
-    check(medicationOrderId, String);
-    if (process.env.NODE_ENV === 'test') {
-        console.log('-----------------------------------------');
-        console.log('Removing medicationOrder... ');
-        MedicationOrders.remove({_id: medicationOrderId});
-    } else {
-        console.log('This command can only be run in a test environment.');
-        console.log('Try setting NODE_ENV=test');
-    }
+        check(medicationOrderId, String);
+        if (process.env.NIGHTWATCH || this.userId) {
+            console.log('-----------------------------------------');
+            console.log('Removing medicationOrder... ');
+            MedicationOrders.remove({_id: medicationOrderId});
+        } else {
+            console.log('Not authorized.  Try logging in or setting NIGHTWATCH=true')
+        }
     },
     dropMedicationOrders: function(){
-    if (process.env.NODE_ENV === 'test') {
-        console.log('-----------------------------------------');
-        console.log('Dropping medicationOrders... ');
-        MedicationOrders.remove({});
-    } else {
-        console.log('This command can only be run in a test environment.');
-        console.log('Try setting NODE_ENV=test');
-    }
+        if (process.env.NIGHTWATCH || this.userId) {
+            console.log('-----------------------------------------');
+            console.log('Dropping medicationOrders... ');
+            MedicationOrders.remove({});
+        } else {
+            console.log('Not authorized.  Try logging in or setting NIGHTWATCH=true')
+        }
     }
 
 });

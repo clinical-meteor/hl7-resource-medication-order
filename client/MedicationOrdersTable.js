@@ -6,7 +6,9 @@ import { get } from 'lodash';
 import { moment } from 'meteor/momentjs:moment';
 import PropTypes from 'prop-types';
 import { Card, CardActions, CardMedia, CardText, CardTitle, Toggle } from 'material-ui';
+
 import { FaTags, FaCode, FaPuzzlePiece, FaLock  } from 'react-icons/fa';
+import { GoTrashcan } from 'react-icons/go'
 
 flattenMedicationOrder = function(medicationOrder){
   // console.log('flattenMedicationOrder', medicationOrder)
@@ -92,7 +94,7 @@ export class MedicationOrdersTable extends React.Component {
   renderToggleHeader(){
     if (!this.props.hideToggle) {
       return (
-        <th className="toggle">Toggle</th>
+        <th className="toggle" style={{width: '60px'}} >Toggle</th>
       );
     }
   }
@@ -154,16 +156,35 @@ export class MedicationOrdersTable extends React.Component {
       );
     }
   } 
+  removeRecord(_id){
+    console.log('Remove medication order ', _id)
+    MedicationOrders._collection.remove({_id: _id})
+  }
+  showSecurityDialog(medicationOrder){
+    console.log('showSecurityDialog', medicationOrder)
+
+    Session.set('securityDialogResourceJson', MedicationOrders.findOne(get(medicationOrder, '_id')));
+    Session.set('securityDialogResourceType', 'MedicationOrder');
+    Session.set('securityDialogResourceId', get(medicationOrder, '_id'));
+    Session.set('securityDialogOpen', true);
+  }
   render () {
     let tableRows = [];
     for (var i = 0; i < this.data.medicationOrders.length; i++) {
       var newRow = this.data.medicationOrders[i];
 
+      let rowStyle = {
+        cursor: 'pointer'
+      }
+      if(get(this.data.medicationOrders[i], 'modifierExtension[0]')){
+        rowStyle.color = "orange";
+      }
+
       tableRows.push(
-        <tr key={i} className="medicationOrderRow" style={{cursor: "pointer"}} onClick={ this.rowClick.bind('this', this.data.medicationOrders[i]._id)} >
+        <tr key={i} className="medicationOrderRow" style={rowStyle} onClick={ this.rowClick.bind('this', this.data.medicationOrders[i]._id)} >
 
           { this.renderToggle() }
-          { this.renderActionIcons() }
+          { this.renderActionIcons(this.data.medicationOrders[i]) }
           { this.renderIdentifier(newRow.identifier) }
 
           {/* <td className='identifier' style={ this.displayOnMobile()} >{ newRow.identifier }</td> */}
