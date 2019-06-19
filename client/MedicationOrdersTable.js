@@ -1,14 +1,36 @@
 import React from 'react';
-import { ReactMeteorData } from 'meteor/react-meteor-data';
-import ReactMixin from 'react-mixin';
-import { Table } from 'react-bootstrap';
-import { get } from 'lodash';
-import { moment } from 'meteor/momentjs:moment';
 import PropTypes from 'prop-types';
-import { Card, CardActions, CardMedia, CardText, CardTitle, Toggle } from 'material-ui';
+
+
+// import { ReactMeteorData } from 'meteor/react-meteor-data';
+// import ReactMixin from 'react-mixin';
+
+import { CardText, Checkbox } from 'material-ui';
+import { Table } from 'react-bootstrap';
+
+import moment from 'moment-es6'
+import _ from 'lodash';
+let get = _.get;
+let set = _.set;
 
 import { FaTags, FaCode, FaPuzzlePiece, FaLock  } from 'react-icons/fa';
 import { GoTrashcan } from 'react-icons/go'
+
+let styles = {
+  hideOnPhone: {
+    visibility: 'visible',
+    display: 'table'
+  },
+  cellHideOnPhone: {
+    visibility: 'visible',
+    display: 'table',
+    paddingTop: '16px',
+    maxWidth: '120px'
+  },
+  cell: {
+    paddingTop: '16px'
+  }
+}
 
 flattenMedicationOrder = function(medicationOrder){
   // console.log('flattenMedicationOrder', medicationOrder)
@@ -38,17 +60,25 @@ flattenMedicationOrder = function(medicationOrder){
   newRow.dateWritten = moment(get(medicationOrder, 'dateWritten')).format("YYYY-MM-DD");
   newRow.dosageInstructionText = get(medicationOrder, 'dosageInstruction[0].text');
   newRow.medicationCodeableConcept = get(medicationOrder, 'medicationCodeableConcept.text');
+  newRow.barcode = get(medicationOrder, '_id');
+
   // newRow.asserterDisplay = get(medicationOrder, 'asserter.display');
   // newRow.clinicalStatus = get(medicationOrder, 'clinicalStatus');
   // newRow.snomedCode = get(medicationOrder, 'code.coding[0].code');
   // newRow.snomedDisplay = get(medicationOrder, 'code.coding[0].display');
   // newRow.evidenceDisplay = get(medicationOrder, 'evidence[0].detail[0].display');
-  newRow.barcode = get(medicationOrder, '_id');
 
   return newRow;
 }
 
 export class MedicationOrdersTable extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      selected: [],
+      medicationOrders: []
+    }
+  }
   getMeteorData() {
 
     // this should all be handled by props
@@ -91,19 +121,19 @@ export class MedicationOrdersTable extends React.Component {
     Session.set('medicationOrderPageTabIndex', 2);
   };
 
-  renderToggleHeader(){
-    if (!this.props.hideToggle) {
+  renderCheckboxHeader(){
+    if (!this.props.hideCheckboxes) {
       return (
-        <th className="toggle" style={{width: '60px'}} >Toggle</th>
+        <th className="toggle" style={{width: '60px'}} >Checkbox</th>
       );
     }
   }
-  renderToggle(){
-    if (!this.props.hideToggle) {
+  renderCheckbox(){
+    if (!this.props.hideCheckboxes) {
       return (
         <td className="toggle" style={{width: '60px'}}>
-            <Toggle
-              defaultToggled={true}
+            <Checkbox
+              defaultCheckbox={true}
             />
           </td>
       );
@@ -112,33 +142,74 @@ export class MedicationOrdersTable extends React.Component {
   renderActionIconsHeader(){
     if (!this.props.hideActionIcons) {
       return (
-        <th className='actionIcons' style={{minWidth: '120px'}}>Actions</th>
+        <th className='actionIcons'>Actions</th>
       );
     }
   }
-  renderActionIcons(actionIcons ){
+  renderActionIcons( medicationOrder ){
     if (!this.props.hideActionIcons) {
+
+      let iconStyle = {
+        marginLeft: '4px', 
+        marginRight: '4px', 
+        marginTop: '4px', 
+        fontSize: '120%'
+      }
+
       return (
-        <td className='actionIcons' style={{minWidth: '120px'}}>
-          <FaLock style={{marginLeft: '2px', marginRight: '2px'}} />
-          <FaTags style={{marginLeft: '2px', marginRight: '2px'}} />
-          <FaCode style={{marginLeft: '2px', marginRight: '2px'}} />
-          <FaPuzzlePiece style={{marginLeft: '2px', marginRight: '2px'}} />          
+        <td className='actionIcons' style={{width: '100px'}}>
+          <FaTags style={iconStyle} onClick={this.showSecurityDialog.bind(this, medicationOrder)} />
+          <GoTrashcan style={iconStyle} onClick={this.removeRecord.bind(this, medicationOrder._id)} />  
         </td>
       );
     }
   } 
+
+
+  // renderActionIconsHeader(){
+  //   if (!this.props.hideActionIcons) {
+  //     return (
+  //       <th className='actionIcons' style={{width: '100px'}}>Actions</th>
+  //     );
+  //   }
+  // }
+  // renderActionIcons(actionIcons ){
+  //   if (!this.props.hideActionIcons) {
+  //     return (
+  //       <td className='actionIcons' style={{minWidth: '120px'}}>
+  //         <FaLock style={{marginLeft: '2px', marginRight: '2px'}} />
+  //         <FaTags style={{marginLeft: '2px', marginRight: '2px'}} />
+  //         <FaCode style={{marginLeft: '2px', marginRight: '2px'}} />
+  //         <FaPuzzlePiece style={{marginLeft: '2px', marginRight: '2px'}} />          
+  //       </td>
+  //     );
+  //   }
+  // } 
   renderPatientNameHeader(){
-    if (!this.props.hidePatient) {
+    if (!this.props.hidePatientName) {
       return (
-        <th className='patientDisplay'>patient</th>
+        <th className='patientDisplay'>Patient</th>
       );
     }
   }
   renderPatientName(patientDisplay ){
-    if (!this.props.hidePatient) {
+    if (!this.props.hidePatientName) {
       return (
         <td className='patientDisplay' style={{minWidth: '140px'}}>{ patientDisplay }</td>
+      );
+    }
+  }
+  renderPrescriberNameHeader(){
+    if (!this.props.hidePrescriberName) {
+      return (
+        <th className='prescriberDisplay'>Prescriber</th>
+      );
+    }
+  }
+  renderPrescriberName(prescriberDisplay ){
+    if (!this.props.hidePrescriberName) {
+      return (
+        <td className='prescriberDisplay' style={{minWidth: '140px'}}>{ prescriberDisplay }</td>
       );
     }
   }
@@ -170,41 +241,73 @@ export class MedicationOrdersTable extends React.Component {
   }
   render () {
     let tableRows = [];
-    for (var i = 0; i < this.data.medicationOrders.length; i++) {
-      var newRow = this.data.medicationOrders[i];
+    let footer;
 
-      let rowStyle = {
-        cursor: 'pointer'
+    if(this.props.appWidth){
+      if (this.props.appWidth < 768) {
+        styles.hideOnPhone.visibility = 'hidden';
+        styles.hideOnPhone.display = 'none';
+        styles.cellHideOnPhone.visibility = 'hidden';
+        styles.cellHideOnPhone.display = 'none';
+      } else {
+        styles.hideOnPhone.visibility = 'visible';
+        styles.hideOnPhone.display = 'table-cell';
+        styles.cellHideOnPhone.visibility = 'visible';
+        styles.cellHideOnPhone.display = 'table-cell';
+      }  
+    }
+
+    let medicationOrdersToRender = [];
+    if(this.props.medicationOrders){
+      if(this.props.medicationOrders.length > 0){              
+        this.props.medicationOrders.forEach(function(medicationOrder){
+          medicationOrdersToRender.push(flattenMedicationOrder(medicationOrder));
+        });  
       }
-      if(get(this.data.medicationOrders[i], 'modifierExtension[0]')){
-        rowStyle.color = "orange";
+    }
+
+
+    if(medicationOrdersToRender.length === 0){
+      console.log('No medication orders to render');
+      // footer = <TableNoData noDataPadding={ this.props.noDataMessagePadding } />
+    } else {
+      for (var i = 0; i < medicationOrdersToRender.length; i++) {
+        var newRow = medicationOrdersToRender[i];
+  
+        let rowStyle = {
+          cursor: 'pointer'
+        }
+        if(get(medicationOrdersToRender[i], 'modifierExtension[0]')){
+          rowStyle.color = "orange";
+        }
+  
+        tableRows.push(
+          <tr key={i} className="medicationOrderRow" onClick={ this.rowClick.bind('this', newRow._id)} >
+  
+            { this.renderCheckbox() }
+            { this.renderActionIcons(newRow) }
+            { this.renderIdentifier(newRow.identifier) }
+  
+            {/* <td className='identifier' style={ this.displayOnMobile()} >{ newRow.identifier }</td> */}
+            <td className='medication' style={ this.displayOnMobile()}>{ newRow.medication }</td>
+            <td className='status' style={ this.displayOnMobile()}>{ newRow.status }</td>
+            { this.renderPatientName(newRow.patientDisplay ) } 
+            { this.renderPrescriberName(newRow.prescriberDisplay ) } 
+            {/* <td className='patientDisplay' style={ this.displayOnMobile('140px')} >{ newRow.patientDisplay }</td> */}
+            {/* <td className='prescriberDisplay' style={{minWidth: '200px'}}>{ newRow.prescriberDisplay }</td> */}
+            <td className='dateWritten'>{ newRow.dateWritten }</td>
+            <td className='dosageInstructionText'>{ newRow.dosageInstructionText }</td>
+            {/* <td><span className="barcode">{ newRow.barcode }</span></td> */}
+          </tr>
+        )
       }
-
-      tableRows.push(
-        <tr key={i} className="medicationOrderRow" style={rowStyle} onClick={ this.rowClick.bind('this', this.data.medicationOrders[i]._id)} >
-
-          { this.renderToggle() }
-          { this.renderActionIcons(this.data.medicationOrders[i]) }
-          { this.renderIdentifier(newRow.identifier) }
-
-          {/* <td className='identifier' style={ this.displayOnMobile()} >{ newRow.identifier }</td> */}
-          <td className='medication' style={ this.displayOnMobile()}>{ newRow.medication }</td>
-          <td className='status' style={ this.displayOnMobile()}>{ newRow.status }</td>
-          { this.renderPatientName(newRow.patientDisplay ) } 
-          {/* <td className='patientDisplay' style={ this.displayOnMobile('140px')} >{ newRow.patientDisplay }</td> */}
-          <td className='prescriberDisplay' style={{minWidth: '200px'}}>{ newRow.prescriberDisplay }</td>
-          <td className='dateWritten'>{ newRow.dateWritten }</td>
-          <td className='dosageInstructionText'>{ newRow.dosageInstructionText }</td>
-          {/* <td><span className="barcode">{ newRow.barcode }</span></td> */}
-        </tr>
-      )
     }
 
     return(
       <Table id='medicationOrdersTable' hover >
         <thead>
           <tr>
-            { this.renderToggleHeader() }
+            { this.renderCheckboxHeader() }
             { this.renderActionIconsHeader() }
             { this.renderIdentifier() }
 
@@ -212,8 +315,9 @@ export class MedicationOrdersTable extends React.Component {
             <th className='medication' style={ this.displayOnMobile()} >Medication</th>
             <th className='status' style={ this.displayOnMobile()} >Status</th>
             { this.renderPatientNameHeader() }
+            { this.renderPrescriberNameHeader() }
             {/* <th className='patientDisplay' style={ this.displayOnMobile('140px')} >Patient</th> */}
-            <th className='prescriberDisplay' style={{minWidth: '200px'}}>Prescriber</th>
+            {/* <th className='prescriberDisplay' style={{minWidth: '200px'}}>Prescriber</th> */}
             <th className='dateWritten' style={{minWidth: '100px'}}>Date Written</th>
             <th className='dosageInstructionText'>Dosage</th>
             {/* <th>_id</th> */}
@@ -229,12 +333,20 @@ export class MedicationOrdersTable extends React.Component {
 
 MedicationOrdersTable.propTypes = {
   id: PropTypes.string,
+  medicationOrders: PropTypes.array,
   fhirVersion: PropTypes.string,
   showSendButton: PropTypes.bool,
-  hideToggle: PropTypes.bool,
+  hideCheckboxes: PropTypes.bool,
   hideActionIcons: PropTypes.bool,
   hidePatient: PropTypes.bool,
-  noDataMessagePadding: PropTypes.number
+  hidePrescriber: PropTypes.bool,
+  noDataMessagePadding: PropTypes.number,
+  onCellClick: PropTypes.func,
+  onRowClick: PropTypes.func,
+  onMetaClick: PropTypes.func,
+  onRemoveRecord: PropTypes.func,
+  onActionButtonClick: PropTypes.func,
+  actionButtonLabel: PropTypes.string
 };
-ReactMixin(MedicationOrdersTable.prototype, ReactMeteorData);
+
 export default MedicationOrdersTable;
