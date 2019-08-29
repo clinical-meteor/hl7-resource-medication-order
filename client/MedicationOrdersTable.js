@@ -340,6 +340,7 @@ MedicationOrdersTable.propTypes = {
   hideActionIcons: PropTypes.bool,
   hidePatient: PropTypes.bool,
   hidePrescriber: PropTypes.bool,
+  hideIdentifier: PropTypes.bool,
   noDataMessagePadding: PropTypes.number,
   onCellClick: PropTypes.func,
   onRowClick: PropTypes.func,
