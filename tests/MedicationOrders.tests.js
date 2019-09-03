@@ -3,7 +3,7 @@ import { assert } from 'meteor/practicalmeteor:chai';
 import { chai } from 'meteor/practicalmeteor:chai';
 import { expect } from 'meteor/practicalmeteor:chai';
 
-describe('clinical:hl7-resource-medication', function () {
+describe('clinical:hl7-resource-medication-order', function () {
   beforeEach(function () {
     //console.log('beforeEach');
   });
