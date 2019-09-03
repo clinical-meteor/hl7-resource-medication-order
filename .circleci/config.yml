@@ -10,7 +10,7 @@
 version: 2
 jobs:
   build:
-    working_directory: ~/clinical-meteor/hl7-resource-medication-order 
+    working_directory: ~/clinical-meteor/hl7-resource-document-reference 
     parallelism: 1
     shell: /bin/bash --login
 
@@ -31,7 +31,7 @@ jobs:
     # https://circleci.com/docs/2.0/circleci-images/
     docker:
     - image: circleci/node:8.9-browsers
-      command: /sbin/init
+      #command: /sbin/init
       name: meteorapp
       environment:
         CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
@@ -109,16 +109,16 @@ jobs:
 
     - run: cd ../baseline && meteor npm install
     - run: cd ../baseline && meteor npm install react simpl-schema
-    - run: cd ../baseline && mkdir packages && cd packages && mkdir hl7-resource-medication-order 
-    - run: cp -R ./* ../baseline/packages/hl7-resource-medication-order 
-    - run: cd ../baseline/packages/hl7-resource-medication-order && pwd
+    - run: cd ../baseline && mkdir packages && cd packages && mkdir hl7-resource-document-reference 
+    - run: cp -R ./* ../baseline/packages/hl7-resource-document-reference 
+    - run: cd ../baseline/packages/hl7-resource-document-reference && pwd
     - run: cd ../baseline/packages && ls -la
 
     - run: cd ../baseline && npm i --save-dev selenium-webdriver@3.6.0 chromedriver
     - run: cd ../baseline && meteor add dispatch:mocha practicalmeteor:chai
-    - run: cd ../baseline && meteor add clinical:hl7-resource-medication-order 
+    - run: cd ../baseline && meteor add clinical:hl7-resource-document-reference 
     - run: cd ../baseline && mkdir imports 
-    - run: cp tests/MedicationOrders.tests.js ../baseline/imports/
+    - run: cp tests/DocumentReferenceTests.tests.js ../baseline/imports/
 
 
     #- run the app
