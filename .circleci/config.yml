@@ -118,7 +118,7 @@ jobs:
     - run: cd ../baseline && meteor add dispatch:mocha practicalmeteor:chai
     - run: cd ../baseline && meteor add clinical:hl7-resource-document-reference 
     - run: cd ../baseline && mkdir imports 
-    - run: cp tests/DocumentReferenceTests.tests.js ../baseline/imports/
+    - run: cp tests/MedicationOrders.tests.js ../baseline/imports/
 
 
     #- run the app
