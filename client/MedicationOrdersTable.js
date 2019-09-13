@@ -52,7 +52,14 @@ flattenMedicationOrder = function(medicationOrder){
     medicationCodeableConcept: ''
   };
 
-  newRow.medication = get(medicationOrder, 'medicationReference.display');
+  newRow.medication = get(medicationOrder, 'medicationCodeableConcept.text');
+
+  if(get(medicationOrder, 'medicationCodeableConcept.text')){
+    newRow.medication = get(medicationOrder, 'medicationCodeableConcept.text');
+  } else if (get(medicationOrder, 'medicationReference.display')){
+    newRow.medication = get(medicationOrder, 'medicationReference.display');
+  }
+
   newRow.status = get(medicationOrder, 'status');
   newRow.identifier = get(medicationOrder, 'identifier[0].value');
   newRow.patientDisplay = get(medicationOrder, 'patient.display');
@@ -61,12 +68,6 @@ flattenMedicationOrder = function(medicationOrder){
   newRow.dosageInstructionText = get(medicationOrder, 'dosageInstruction[0].text');
   newRow.medicationCodeableConcept = get(medicationOrder, 'medicationCodeableConcept.text');
   newRow.barcode = get(medicationOrder, '_id');
-
-  // newRow.asserterDisplay = get(medicationOrder, 'asserter.display');
-  // newRow.clinicalStatus = get(medicationOrder, 'clinicalStatus');
-  // newRow.snomedCode = get(medicationOrder, 'code.coding[0].code');
-  // newRow.snomedDisplay = get(medicationOrder, 'code.coding[0].display');
-  // newRow.evidenceDisplay = get(medicationOrder, 'evidence[0].detail[0].display');
 
   return newRow;
 }
@@ -288,9 +289,9 @@ export class MedicationOrdersTable extends React.Component {
             { this.renderActionIcons(newRow) }
             { this.renderIdentifier(newRow.identifier) }
   
-            {/* <td className='identifier' style={ this.displayOnMobile()} >{ newRow.identifier }</td> */}
-            <td className='medication' style={ this.displayOnMobile()}>{ newRow.medication }</td>
-            <td className='status' style={ this.displayOnMobile()}>{ newRow.status }</td>
+            {/* <td className='identifier' >{ newRow.identifier }</td> */}
+            <td className='medication' >{ newRow.medication }</td>
+            <td className='status' >{ newRow.status }</td>
             { this.renderPatientName(newRow.patientDisplay ) } 
             { this.renderPrescriberName(newRow.prescriberDisplay ) } 
             {/* <td className='patientDisplay' style={ this.displayOnMobile('140px')} >{ newRow.patientDisplay }</td> */}
@@ -311,9 +312,9 @@ export class MedicationOrdersTable extends React.Component {
             { this.renderActionIconsHeader() }
             { this.renderIdentifier() }
 
-            {/* <th className='identifier' style={ this.displayOnMobile()} >Identifier</th> */}
-            <th className='medication' style={ this.displayOnMobile()} >Medication</th>
-            <th className='status' style={ this.displayOnMobile()} >Status</th>
+            {/* <th className='identifier' >Identifier</th> */}
+            <th className='medication' >Medication</th>
+            <th className='status' >Status</th>
             { this.renderPatientNameHeader() }
             { this.renderPrescriberNameHeader() }
             {/* <th className='patientDisplay' style={ this.displayOnMobile('140px')} >Patient</th> */}
