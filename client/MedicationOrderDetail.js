@@ -1,11 +1,18 @@
-import { CardActions, CardText } from 'material-ui/Card';
 
-import { Bert } from 'meteor/clinical:alert';
-import RaisedButton from 'material-ui/RaisedButton';
+import { 
+  Card,
+  CardActions,
+  CardHeader,
+  CardContent,
+  Button,
+  Typography,
+  TextField
+} from '@material-ui/core';
+
+// import { Bert } from 'meteor/clinical:alert';
 import React from 'react';
 import { ReactMeteorData } from 'meteor/react-meteor-data';
 import ReactMixin from 'react-mixin';
-import TextField from 'material-ui/TextField';
 import PropTypes from 'prop-types';
 import { get, set } from 'lodash';
 
@@ -205,7 +212,7 @@ export class MedicationOrderDetail extends React.Component {
   render() {
     return (
       <div id={this.props.id} className="medicationOrderDetail">
-        <CardText>
+        <CardContent>
           {/* <TextField
             id='patientDisplayInput'
             ref='patientDisplay'
@@ -264,7 +271,7 @@ export class MedicationOrderDetail extends React.Component {
 
 
 
-        </CardText>
+        </CardContent>
         <CardActions>
           { this.determineButtons(this.data.medicationOrderId) }
         </CardActions>
@@ -277,13 +284,13 @@ export class MedicationOrderDetail extends React.Component {
     if (medicationOrderId) {
       return (
         <div>
-          <RaisedButton id="saveMedicationOrderButton" label="Save" primary={true} onClick={this.handleSaveButton.bind(this)} style={{marginRight: '20px'}}  />
-          <RaisedButton id="deleteMedicationOrderButton" label="Delete" onClick={this.handleDeleteButton.bind(this)} />
+          <Button id="saveMedicationOrderButton" color="primary"  onClick={this.handleSaveButton.bind(this)} style={{marginRight: '20px'}} >Save</Button>
+          <Button id="deleteMedicationOrderButton" onClick={this.handleDeleteButton.bind(this)} >Delete</Button>
         </div>
       );
     } else {
       return(
-        <RaisedButton id="saveMedicationOrderButton" label="Save" primary={true} onClick={this.handleSaveButton.bind(this)} />
+        <Button id="saveMedicationOrderButton" color="primary" onClick={this.handleSaveButton.bind(this)} >Save</Button>
       );
     }
   }
@@ -355,14 +362,14 @@ export class MedicationOrderDetail extends React.Component {
           if (error) {
             console.log("error", error);
 
-            Bert.alert(error.reason, 'danger');
+            // Bert.alert(error.reason, 'danger');
           }
           if (result) {
             HipaaLogger.logEvent({eventType: "update", userId: Meteor.userId(), userName: Meteor.user().fullName(), collectionName: "MedicationOrders", recordId: Session.get('selectedMedicationOrder')});
             Session.set('medicationOrderPageTabIndex', 1);
             Session.set('selectedMedicationOrder', false);
             Session.set('medicationOrderUpsert', false);
-            Bert.alert('MedicationOrder updated!', 'success');
+            // Bert.alert('MedicationOrder updated!', 'success');
           }
         });
     } else {
@@ -372,14 +379,14 @@ export class MedicationOrderDetail extends React.Component {
       MedicationOrders.insert(medicationOrderUpdate, function(error, result) {
         if (error) {
           console.log("error", error);
-          Bert.alert(error.reason, 'danger');
+          // Bert.alert(error.reason, 'danger');
         }
         if (result) {
           HipaaLogger.logEvent({eventType: "create", userId: Meteor.userId(), userName: Meteor.user().fullName(), collectionName: "MedicationOrders", recordId: result});
           Session.set('medicationOrderPageTabIndex', 1);
           Session.set('selectedMedicationOrder', false);
           Session.set('medicationOrderUpsert', false);
-          Bert.alert('MedicationOrder added!', 'success');
+          // Bert.alert('MedicationOrder added!', 'success');
         }
       });
     }
@@ -392,14 +399,14 @@ export class MedicationOrderDetail extends React.Component {
   handleDeleteButton(){
     MedicationOrder.remove({_id: Session.get('selectedMedicationOrder')}, function(error, result){
       if (error) {
-        Bert.alert(error.reason, 'danger');
+        // Bert.alert(error.reason, 'danger');
       }
       if (result) {
         HipaaLogger.logEvent({eventType: "delete", userId: Meteor.userId(), userName: Meteor.user().fullName(), collectionName: "MedicationOrders", recordId: Session.get('selectedMedicationOrder')});
         Session.set('medicationOrderPageTabIndex', 1);
         Session.set('selectedMedicationOrder', false);
         Session.set('medicationOrderUpsert', false);
-        Bert.alert('MedicationOrder removed!', 'success');
+        // Bert.alert('MedicationOrder removed!', 'success');
       }
     });
   }

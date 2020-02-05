@@ -1,12 +1,25 @@
-import React from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 
+import { 
+  Button,
+  Card,
+  Checkbox,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  TableFooter,
+  TablePagination,
+  IconButton,
+  FirstPageIcon,
+  KeyboardArrowLeft,
+  KeyboardArrowRight,
+  LastPageIcon
+} from '@material-ui/core';
 
-// import { ReactMeteorData } from 'meteor/react-meteor-data';
-// import ReactMixin from 'react-mixin';
-
-import { CardText, Checkbox } from 'material-ui';
-import { Table } from 'react-bootstrap';
+import TableNoData from 'material-fhir-ui';
 
 import moment from 'moment-es6'
 import _ from 'lodash';
@@ -15,6 +28,26 @@ let set = _.set;
 
 import { FaTags, FaCode, FaPuzzlePiece, FaLock  } from 'react-icons/fa';
 import { GoTrashcan } from 'react-icons/go'
+
+import { Meteor } from 'meteor/meteor';
+import { Session } from 'meteor/session';
+
+
+//===========================================================================
+// THEMING
+
+import { ThemeProvider, makeStyles } from '@material-ui/styles';
+const useStyles = makeStyles(theme => ({
+  button: {
+    background: theme.background,
+    border: 0,
+    borderRadius: 3,
+    boxShadow: '0 3px 5px 2px rgba(255, 105, 135, .3)',
+    color: theme.buttonText,
+    height: 48,
+    padding: '0 30px',
+  }
+}));
 
 let styles = {
   hideOnPhone: {
@@ -32,14 +65,16 @@ let styles = {
   }
 }
 
-flattenMedicationOrder = function(medicationOrder){
-  // console.log('flattenMedicationOrder', medicationOrder)
+//===========================================================================
+// FLATTENING / MAPPING
 
-  let newRow = {
+flattenMedicationOrder = function(medicationOrder, dateFormat){
+  let result = {
     _id: medicationOrder._id,
     status: '',
     identifier: '',
     patientDisplay: '',
+    patientReference: '',
     prescriberDisplay: '',
     asserterDisplay: '',
     clinicalStatus: '',
@@ -49,106 +84,125 @@ flattenMedicationOrder = function(medicationOrder){
     barcode: '',
     dateWritten: '',
     dosageInstructionText: '',
-    medicationCodeableConcept: ''
+    medicationCodeableConcept: '',
+    medicationCode: '',
+    dosage: ''
   };
 
-  newRow.medication = get(medicationOrder, 'medicationCodeableConcept.text');
-
-  if(get(medicationOrder, 'medicationCodeableConcept.text')){
-    newRow.medication = get(medicationOrder, 'medicationCodeableConcept.text');
-  } else if (get(medicationOrder, 'medicationReference.display')){
-    newRow.medication = get(medicationOrder, 'medicationReference.display');
+  if(!dateFormat){
+    dateFormat = get(Meteor, "settings.public.defaults.dateFormat", "YYYY-MM-DD");
   }
 
-  newRow.status = get(medicationOrder, 'status');
-  newRow.identifier = get(medicationOrder, 'identifier[0].value');
-  newRow.patientDisplay = get(medicationOrder, 'patient.display');
-  newRow.prescriberDisplay = get(medicationOrder, 'prescriber.display');
-  newRow.dateWritten = moment(get(medicationOrder, 'dateWritten')).format("YYYY-MM-DD");
-  newRow.dosageInstructionText = get(medicationOrder, 'dosageInstruction[0].text');
-  newRow.medicationCodeableConcept = get(medicationOrder, 'medicationCodeableConcept.text');
-  newRow.barcode = get(medicationOrder, '_id');
+  if (get(medicationOrder, 'medicationReference.display')){
+    result.medicationCodeableConcept = get(medicationOrder, 'medicationReference.display');
+  } else if(get(medicationOrder, 'medicationCodeableConcept')){
+    result.medicationCodeableConcept = get(medicationOrder, 'medicationCodeableConcept.text');
+    result.medicationCode = get(medicationOrder, 'medicationCodeableConcept.coding[0].code');
+  } 
 
-  return newRow;
+  result.status = get(medicationOrder, 'status');
+  result.identifier = get(medicationOrder, 'identifier[0].value');
+  result.patientDisplay = get(medicationOrder, 'patient.display');
+  result.patientReference = get(medicationOrder, 'patient.reference');
+  result.prescriberDisplay = get(medicationOrder, 'prescriber.display');
+  result.dateWritten = moment(get(medicationOrder, 'dateWritten')).format(dateFormat);
+  
+  result.dosage = get(medicationOrder, 'dosageInstruction[0].text');
+  result.barcode = get(medicationOrder, '_id');
+
+  return result;
 }
 
-export class MedicationOrdersTable extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      selected: [],
-      medicationOrders: []
-    }
-  }
-  getMeteorData() {
+// ===============================================================================================
+// FUNCTIONAL COMPONENT
 
-    // this should all be handled by props
-    // or a mixin!
-    let data = {
-      style: {
-        opacity: Session.get('globalOpacity')
-      },
-      selected: [],
-      medicationOrders: []
-    }
-    
-    if(this.props.data){
-      // console.log('this.props.data', this.props.data)
-      this.props.data.forEach(function(order){
-        // console.log('order', order)
-        data.medicationOrders.push(flattenMedicationOrder(order));
-      })
-    } else {
-      data.medicationOrders = MedicationOrders.find().map(flattenMedicationOrder);
-    }
+function MedicationOrdersTable(props){
+  logger.info('Rendering the MedicationOrdersTable');
+  logger.verbose('clinical:hl7-resource-encounter.client.MedicationOrdersTable');
+  logger.data('MedicationOrdersTable.props', {data: props}, {source: "MedicationOrdersTable.jsx"});
 
-    if(process.env.NODE_ENV === "test") console.log("MedicationOrdersTable.data", data);
-    return data;
-  };
-  displayOnMobile(width){
-    let style = {};
-    if(['iPhone'].includes(window.navigator.platform)){
-      style.display = "none";
-    }
-    if(width){
-      style.width = width;
-    }
-    return style;
+  let rows = [];
+  let rowsPerPageToRender = 5;
+
+  const classes = useStyles();
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+
+  if(props.rowsPerPage){
+    // if we receive an override as a prop, render that many rows
+    // best to use rowsPerPage with disablePagination
+    rowsPerPageToRender = props.rowsPerPage;
+  } else {
+    // otherwise default to the user selection
+    rowsPerPageToRender = rowsPerPage;
   }
 
-  rowClick(id){
-    Session.set('medicationOrdersUpsert', false);
-    Session.set('selectedMedicationOrder', id);
-    Session.set('medicationOrderPageTabIndex', 2);
-  };
+  let paginationCount = 101;
+  if(props.count){
+    paginationCount = props.count;
+  } else {
+    paginationCount = rows.length;
+  }
 
-  renderCheckboxHeader(){
-    if (!this.props.hideCheckboxes) {
+  function rowClick(id){
+    // logger.info('MedicationOrdersTable.rowClick', id);
+
+    Session.set("selectedMedicationOrderId", id);
+    Session.set('medicationOrderPageTabIndex', 1);
+    Session.set('medicationOrderDetailState', false);
+
+    // Session.set('medicationOrdersUpsert', false);
+    // Session.set('selectedMedicationOrder', id);
+
+    if(props && (typeof props.onRowClick === "function")){
+      props.onRowClick(id);
+    }
+  }
+  function renderCheckboxHeader(){
+    if (!props.hideCheckboxes) {
       return (
-        <th className="toggle" style={{width: '60px'}} >Checkbox</th>
+        <TableCell className="toggle" style={{width: '60px'}} >Checkbox</TableCell>
       );
     }
   }
-  renderCheckbox(){
-    if (!this.props.hideCheckboxes) {
+  function renderCheckbox(){
+    if (!props.hideCheckboxes) {
       return (
-        <td className="toggle" style={{width: '60px'}}>
-            <Checkbox
+        <TableCell className="toggle" style={{width: '60px'}}>
+            {/* <Checkbox
               defaultCheckbox={true}
-            />
-          </td>
+            /> */}
+          </TableCell>
       );
     }
   }
-  renderActionIconsHeader(){
-    if (!this.props.hideActionIcons) {
+  function renderToggleHeader(){
+    if (!props.hideCheckboxes) {
       return (
-        <th className='actionIcons'>Actions</th>
+        <TableCell className="toggle" style={{width: '60px'}} >Toggle</TableCell>
       );
     }
   }
-  renderActionIcons( medicationOrder ){
-    if (!this.props.hideActionIcons) {
+  function renderToggle(){
+    if (!props.hideCheckboxes) {
+      return (
+        <TableCell className="toggle" style={{width: '60px'}}>
+            {/* <Checkbox
+              defaultChecked={true}
+            /> */}
+        </TableCell>
+      );
+    }
+  }
+  function renderActionIconsHeader(){
+    if (!props.hideActionIcons) {
+      return (
+        <TableCell className='actionIcons'>Actions</TableCell>
+      );
+    }
+  }
+  function renderActionIcons( medicationOrder ){
+    if (!props.hideActionIcons) {
 
       let iconStyle = {
         marginLeft: '4px', 
@@ -158,197 +212,309 @@ export class MedicationOrdersTable extends React.Component {
       }
 
       return (
-        <td className='actionIcons' style={{width: '100px'}}>
-          <FaTags style={iconStyle} onClick={this.showSecurityDialog.bind(this, medicationOrder)} />
-          <GoTrashcan style={iconStyle} onClick={this.removeRecord.bind(this, medicationOrder._id)} />  
-        </td>
+        <TableCell className='actionIcons' style={{width: '100px'}}>
+          <FaTags style={iconStyle} onClick={ showSecurityDialog.bind(this, medicationOrder)} />
+          <GoTrashcan style={iconStyle} onClick={ removeRecord.bind(this, medicationOrder._id)} />  
+        </TableCell>
       );
     }
   } 
-
-
-  // renderActionIconsHeader(){
-  //   if (!this.props.hideActionIcons) {
-  //     return (
-  //       <th className='actionIcons' style={{width: '100px'}}>Actions</th>
-  //     );
-  //   }
-  // }
-  // renderActionIcons(actionIcons ){
-  //   if (!this.props.hideActionIcons) {
-  //     return (
-  //       <td className='actionIcons' style={{minWidth: '120px'}}>
-  //         <FaLock style={{marginLeft: '2px', marginRight: '2px'}} />
-  //         <FaTags style={{marginLeft: '2px', marginRight: '2px'}} />
-  //         <FaCode style={{marginLeft: '2px', marginRight: '2px'}} />
-  //         <FaPuzzlePiece style={{marginLeft: '2px', marginRight: '2px'}} />          
-  //       </td>
-  //     );
-  //   }
-  // } 
-  renderPatientNameHeader(){
-    if (!this.props.hidePatientName) {
+  function renderStatusHeader(){
+    if (!props.hideStatus) {
       return (
-        <th className='patientDisplay'>Patient</th>
+        <TableCell className='patientDisplay'>Status</TableCell>
       );
     }
   }
-  renderPatientName(patientDisplay ){
-    if (!this.props.hidePatientName) {
+  function renderStatus(status ){
+    if (!props.hideStatus) {
       return (
-        <td className='patientDisplay' style={{minWidth: '140px'}}>{ patientDisplay }</td>
+        <TableCell className='status' style={{minWidth: '140px'}}>{ status }</TableCell>
       );
     }
   }
-  renderPrescriberNameHeader(){
-    if (!this.props.hidePrescriberName) {
+  function renderPatientHeader(){
+    if (!props.hidePatient) {
       return (
-        <th className='prescriberDisplay'>Prescriber</th>
+        <TableCell className='patientDisplay'>Patient</TableCell>
       );
     }
   }
-  renderPrescriberName(prescriberDisplay ){
-    if (!this.props.hidePrescriberName) {
+  function renderPatient(patientDisplay ){
+    if (!props.hidePatient) {
       return (
-        <td className='prescriberDisplay' style={{minWidth: '140px'}}>{ prescriberDisplay }</td>
+        <TableCell className='patientDisplay' style={{minWidth: '140px'}}>{ patientDisplay }</TableCell>
       );
     }
   }
-  renderIdentifierHeader(){
-    if (!this.props.hideIdentifier) {
+  function renderPatientReferenceHeader(){
+    if (!props.hidePatientReference) {
       return (
-        <th className='identifier'>Identifier</th>
+        <TableCell className='patientReference'>Patient Reference</TableCell>
       );
     }
   }
-  renderIdentifier(identifier ){
-    if (!this.props.hideIdentifier) {
+  function renderPatientReference(patientReference ){
+    if (!props.hidePatientReference) {
       return (
-        <td className='identifier'>{ identifier }</td>
+        <TableCell className='patientReference' style={{minWidth: '140px'}}>{ patientReference }</TableCell>
+      );
+    }
+  }
+  function renderPrescriberHeader(){
+    if (!props.hidePrescriber) {
+      return (
+        <TableCell className='prescriberDisplay'>Prescriber</TableCell>
+      );
+    }
+  }
+  function renderPrescriber(prescriberDisplay ){
+    if (!props.hidePrescriber) {
+      return (
+        <TableCell className='prescriberDisplay' style={{minWidth: '140px'}}>{ prescriberDisplay }</TableCell>
+      );
+    }
+  }
+  function renderIdentifierHeader(){
+    if (!props.hideIdentifier) {
+      return (
+        <TableCell className='identifier'>Identifier</TableCell>
+      );
+    }
+  }
+  function renderIdentifier(identifier ){
+    if (!props.hideIdentifier) {
+      return (
+        <TableCell className='identifier'>{ identifier }</TableCell>
       );
     }
   } 
-  removeRecord(_id){
-    console.log('Remove medication order ', _id)
+  function renderMedicationHeader(){
+    if (!props.hideMedication) {
+      return (
+        <TableCell className='medicationName'>Medication Name</TableCell>
+      );
+    }
+  }
+  function renderMedication(medicationName ){
+    if (!props.hideMedication) {
+      return (
+        <TableCell className='medicationName'>{ medicationName }</TableCell>
+      );
+    }
+  } 
+  function renderMedicationCodeHeader(){
+    if (!props.hideMedication) {
+      return (
+        <TableCell className='medicationCode'>Medication Code</TableCell>
+      );
+    }
+  }
+  function renderMedicationCode(medicationCode ){
+    if (!props.hideMedication) {
+      return (
+        <TableCell className='medicationCode'>{ medicationCode }</TableCell>
+      );
+    }
+  } 
+  function renderDateWrittenHeader(){
+    if (!props.hideDateWritten) {
+      return (
+        <TableCell className='dateWritten'>Date Written</TableCell>
+      );
+    }
+  }
+  function renderDateWritten(dateWritten ){
+    if (!props.hideDateWritten) {
+      return (
+        <TableCell className='dateWritten'>{ dateWritten }</TableCell>
+      );
+    }
+  } 
+  function renderDosageHeader(){
+    if (!props.hideDosage) {
+      return (
+        <TableCell className='dosage'>Dosage</TableCell>
+      );
+    }
+  }
+  function renderDosage(dosage ){
+    if (!props.hideDosage) {
+      return (
+        <TableCell className='dosage' style={{minWidth: '140px'}}>{ dosage }</TableCell>
+      );
+    }
+  }
+  function renderBarcode(id){
+    if (!props.hideBarcode) {
+      return (
+        <TableCell><span className="barcode helvetica">{id}</span></TableCell>
+      );
+    }
+  }
+  function renderBarcodeHeader(){
+    if (!props.hideBarcode) {
+      return (
+        <TableCell>System ID</TableCell>
+      );
+    }
+  }
+  function renderActionButtonHeader(){
+    if (props.showActionButton === true) {
+      return (
+        <TableCell className='ActionButton' >Action</TableCell>
+      );
+    }
+  }
+  function renderActionButton(patient){
+    if (props.showActionButton === true) {
+      return (
+        <TableCell className='ActionButton' >
+          <Button onClick={ onActionButtonClick.bind(this, patient[i]._id)}>{ get(props, "actionButtonLabel", "") }</Button>
+        </TableCell>
+      );
+    }
+  }
+  function removeRecord(_id){
+    logger.info('Remove medication order: ' + _id)
     MedicationOrders._collection.remove({_id: _id})
   }
-  showSecurityDialog(medicationOrder){
-    console.log('showSecurityDialog', medicationOrder)
+  function showSecurityDialog(medicationOrder){
+    logger.info('Showing the security dialog.')
 
     Session.set('securityDialogResourceJson', MedicationOrders.findOne(get(medicationOrder, '_id')));
     Session.set('securityDialogResourceType', 'MedicationOrder');
     Session.set('securityDialogResourceId', get(medicationOrder, '_id'));
     Session.set('securityDialogOpen', true);
   }
-  render () {
-    let tableRows = [];
-    let footer;
+  function handleChangePage(newPage){
+    setPage(newPage);
+  };
 
-    if(this.props.appWidth){
-      if (this.props.appWidth < 768) {
-        styles.hideOnPhone.visibility = 'hidden';
-        styles.hideOnPhone.display = 'none';
-        styles.cellHideOnPhone.visibility = 'hidden';
-        styles.cellHideOnPhone.display = 'none';
-      } else {
-        styles.hideOnPhone.visibility = 'visible';
-        styles.hideOnPhone.display = 'table-cell';
-        styles.cellHideOnPhone.visibility = 'visible';
-        styles.cellHideOnPhone.display = 'table-cell';
-      }  
-    }
+  let tableRows = [];
+  let medicationOrdersToRender = [];
+  let dateFormat = "YYYY-MM-DD";
 
-    let medicationOrdersToRender = [];
-    if(this.props.medicationOrders){
-      if(this.props.medicationOrders.length > 0){              
-        this.props.medicationOrders.forEach(function(medicationOrder){
-          medicationOrdersToRender.push(flattenMedicationOrder(medicationOrder));
-        });  
-      }
-    }
-
-
-    if(medicationOrdersToRender.length === 0){
-      console.log('No medication orders to render');
-      // footer = <TableNoData noDataPadding={ this.props.noDataMessagePadding } />
-    } else {
-      for (var i = 0; i < medicationOrdersToRender.length; i++) {
-        var newRow = medicationOrdersToRender[i];
-  
-        let rowStyle = {
-          cursor: 'pointer'
-        }
-        if(get(medicationOrdersToRender[i], 'modifierExtension[0]')){
-          rowStyle.color = "orange";
-        }
-  
-        tableRows.push(
-          <tr key={i} className="medicationOrderRow" onClick={ this.rowClick.bind('this', newRow._id)} >
-  
-            { this.renderCheckbox() }
-            { this.renderActionIcons(newRow) }
-            { this.renderIdentifier(newRow.identifier) }
-  
-            {/* <td className='identifier' >{ newRow.identifier }</td> */}
-            <td className='medication' >{ newRow.medication }</td>
-            <td className='status' >{ newRow.status }</td>
-            { this.renderPatientName(newRow.patientDisplay ) } 
-            { this.renderPrescriberName(newRow.prescriberDisplay ) } 
-            {/* <td className='patientDisplay' style={ this.displayOnMobile('140px')} >{ newRow.patientDisplay }</td> */}
-            {/* <td className='prescriberDisplay' style={{minWidth: '200px'}}>{ newRow.prescriberDisplay }</td> */}
-            <td className='dateWritten'>{ newRow.dateWritten }</td>
-            <td className='dosageInstructionText'>{ newRow.dosageInstructionText }</td>
-            {/* <td><span className="barcode">{ newRow.barcode }</span></td> */}
-          </tr>
-        )
-      }
-    }
-
-    return(
-      <Table id='medicationOrdersTable' hover >
-        <thead>
-          <tr>
-            { this.renderCheckboxHeader() }
-            { this.renderActionIconsHeader() }
-            { this.renderIdentifier() }
-
-            {/* <th className='identifier' >Identifier</th> */}
-            <th className='medication' >Medication</th>
-            <th className='status' >Status</th>
-            { this.renderPatientNameHeader() }
-            { this.renderPrescriberNameHeader() }
-            {/* <th className='patientDisplay' style={ this.displayOnMobile('140px')} >Patient</th> */}
-            {/* <th className='prescriberDisplay' style={{minWidth: '200px'}}>Prescriber</th> */}
-            <th className='dateWritten' style={{minWidth: '100px'}}>Date Written</th>
-            <th className='dosageInstructionText'>Dosage</th>
-            {/* <th>_id</th> */}
-          </tr>
-        </thead>
-        <tbody>
-          { tableRows }
-        </tbody>
-      </Table>
-    );
+  if(props.showMinutes){
+    dateFormat = "YYYY-MM-DD hh:mm";
   }
+  if(props.dateFormat){
+    dateFormat = props.dateFormat;
+  }
+
+  if(props.medicationOrders){
+    if(props.medicationOrders.length > 0){     
+      let count = 0;    
+      props.medicationOrders.forEach(function(medicationOrder){
+        if((count >= (page * rowsPerPageToRender)) && (count < (page + 1) * rowsPerPageToRender)){
+          medicationOrdersToRender.push(flattenMedicationOrder(medicationOrder, dateFormat));
+        }
+        count++;
+      });  
+    }
+  }
+
+  if(medicationOrdersToRender.length === 0){
+    logger.trace('MedicationOrdersTable:  No procedures to render.');
+    // footer = <TableNoData noDataPadding={ props.noDataMessagePadding } />
+  } else {
+    for (var i = 0; i < medicationOrdersToRender.length; i++) {
+      tableRows.push(
+        <TableRow className="medicationOrderRow" key={i} onClick={ rowClick.bind(this, medicationOrdersToRender[i]._id)} style={{cursor: 'pointer'}} hover="true" >            
+          { renderToggle() }
+          { renderActionIcons(medicationOrdersToRender[i]) }
+          { renderIdentifier(medicationOrdersToRender[i].identifier ) }
+          { renderMedicationCode(medicationOrdersToRender[i].medicationCode ) }
+          { renderMedication(medicationOrdersToRender[i].medicationCodeableConcept ) }
+          { renderStatus(medicationOrdersToRender[i].status)}
+          { renderPatient(medicationOrdersToRender[i].patientDisplay)}
+          { renderPatientReference(medicationOrdersToRender[i].patientReference)}
+          { renderPrescriber(medicationOrdersToRender[i].performerDisplay)}
+          { renderDateWritten(medicationOrdersToRender[i].dateWritten)}
+          { renderDosage(medicationOrdersToRender[i].dosageInstructionText)}
+          { renderBarcode(medicationOrdersToRender[i]._id)}
+          { renderActionButton(medicationOrdersToRender[i]) }
+        </TableRow>
+      );    
+    }
+  }
+
+
+  let paginationFooter;
+  if(!props.disablePagination){
+    paginationFooter = <TablePagination
+      component="div"
+      rowsPerPageOptions={[5, 10, 25, 100]}
+      colSpan={3}
+      count={paginationCount}
+      rowsPerPage={rowsPerPageToRender}
+      page={page}
+      onChangePage={handleChangePage}
+      style={{float: 'right', border: 'none'}}
+    />
+  }
+
+  return(
+    <div>
+      <Table id="proceduresTable" size="small" aria-label="a dense table" hover="true" >
+        <TableHead>
+          <TableRow>
+            { renderToggleHeader() }
+            { renderActionIconsHeader() }
+            { renderIdentifierHeader() }
+            { renderMedicationCodeHeader() }
+            { renderMedicationHeader() }
+            { renderStatusHeader() }
+            { renderPatientHeader() }
+            { renderPatientReferenceHeader() }
+            { renderPrescriberHeader() }
+            { renderDateWrittenHeader() }
+            { renderDosageHeader() }
+            { renderBarcodeHeader() }
+            { renderActionButtonHeader() }
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          { tableRows }
+        </TableBody>
+      </Table>
+      { paginationFooter }
+    </div>
+  ); 
 }
 
 MedicationOrdersTable.propTypes = {
   id: PropTypes.string,
   medicationOrders: PropTypes.array,
+
+  query: PropTypes.object,
+  paginationLimit: PropTypes.number,
+  disablePagination: PropTypes.bool,
   fhirVersion: PropTypes.string,
-  showSendButton: PropTypes.bool,
+
   hideCheckboxes: PropTypes.bool,
   hideActionIcons: PropTypes.bool,
-  hidePatient: PropTypes.bool,
-  hidePrescriber: PropTypes.bool,
   hideIdentifier: PropTypes.bool,
-  noDataMessagePadding: PropTypes.number,
+  hideMedication: PropTypes.bool,
+  hideStatus: PropTypes.bool,
+  hidePatient: PropTypes.bool,
+  hidePatientReference: PropTypes.bool,
+  hidePrescriber: PropTypes.bool,
+  hideDateWritten: PropTypes.bool,
+  hideDosageInstructions: PropTypes.bool,
+  hideBarcode: PropTypes.bool,
+
   onCellClick: PropTypes.func,
   onRowClick: PropTypes.func,
   onMetaClick: PropTypes.func,
   onRemoveRecord: PropTypes.func,
   onActionButtonClick: PropTypes.func,
-  actionButtonLabel: PropTypes.string
+  showActionButton: PropTypes.bool,
+  actionButtonLabel: PropTypes.string,
+
+  rowsPerPage: PropTypes.number,
+  dateFormat: PropTypes.string,
+  showMinutes: PropTypes.bool
 };
 
 export default MedicationOrdersTable;
